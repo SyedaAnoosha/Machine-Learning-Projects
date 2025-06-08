@@ -1,7 +1,7 @@
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 import numpy as np
-import tensorflow
+import tensorflow as tf
 from tensorflow.keras.models import load_model
 from PIL import Image, ImageOps
 
@@ -24,18 +24,22 @@ canvas_result = st_canvas(
 )
 
 if canvas_result.image_data is not None:
-    tensorflow.compat.v1.reset_default_graph()
-    img = Image.fromarray((255 - canvas_result.image_data[:, :, 0]).astype(np.uint8))
-    img = img.resize((28, 28))
+    img = Image.fromarray(canvas_result.image_data.astype('uint8'), mode='RGBA').convert('L')
+
     img = ImageOps.invert(img)
 
-    st.subheader("Model Input Preview")
-    st.image(img.resize((140, 140)), caption="28x28 Grayscale")
+    img = img.resize((28, 28))
 
-    img = np.array(img).reshape(1, 28, 28, 1).astype("float32") / 255.0
+    img_array = np.array(img).astype('float32') / 255.0
 
-    # Predict
+    img_array = img_array.reshape(1, 28, 28, 1)
+
+    st.subheader("Processed Input (28x28 Grayscale)")
+    st.image(img.resize((140, 140)), caption="Input to Model", width=150)
+
     if st.button("Predict"):
-        prediction = model.predict(img)
-        pred_class = np.argmax(prediction)
-        st.success(f"Predicted Digit: {pred_class}")
+        prediction = model.predict(img_array)
+        pred_class = int(np.argmax(prediction))
+        confidence = float(np.max(prediction)) * 100
+        st.success(f"✅ Predicted Digit: **{pred_class}**")
+        st.info(f"Confidence: **{confidence:.2f}%**")
